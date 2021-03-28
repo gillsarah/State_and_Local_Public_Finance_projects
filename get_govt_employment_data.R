@@ -1,6 +1,8 @@
 
 # data layout https://data.bls.gov/cew/doc/access/csv_data_slices.htm 
 
+library(readxl)
+library(dplyr)
 
 
 # From QCEW Open Data Access RScript Example
@@ -40,3 +42,22 @@ far_w_state_local <- subset(all_industry, (own_code == "2" | own_code == "3") &
 #WA "53000"
 ###
 # fips codes https://data.bls.gov/cew/doc/titles/area/area_titles.htm 
+
+
+# 2019 Annual Survey of State Government Finances Tables
+# state revenue and expenditure
+# https://www.census.gov/data/tables/2019/econ/state/historical-tables.html 
+# url <-  https://www2.census.gov/programs-surveys/state/tables/2019/2019_ASFIN_State_Totals.xlsx
+
+state_fin <- read_xlsx("/Users/Sarah/Documents/GitHub/State_and_Local_Public_Finance_projects/data/2019_ASFIN_State_Totals.xlsx")
+
+far_west_fin <- select(state_fin, "(Thousands of Dollars)", "California", "Nevada", "Oregon", "Washington")
+
+#Alternative via Census: 
+# Public Sector Annual Survey
+#State and Local Government Employment and Payroll Data: 2017-18
+# Table GS00EP03
+
+#Revenue
+# State and Local Governmetn Finance by Level of Government: 2017-18
+# Table GS00LF01
