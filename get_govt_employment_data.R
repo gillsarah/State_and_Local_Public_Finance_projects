@@ -1,32 +1,42 @@
 
+# data layout https://data.bls.gov/cew/doc/access/csv_data_slices.htm 
+
+
+
 # From QCEW Open Data Access RScript Example
 # ******************************************************************************************
-# qcewGetAreaData : This function takes a year, quarter, and area argument and
-# returns an array containing the associated area data. use 'a' for annual
-# averages. 
-# For all area codes and titles see:
-# http://data.bls.gov/cew/doc/titles/area/area_titles.htm
+# qcewGetIndustryData : This function takes a year, quarter, and industry code
+# and returns an array containing the associated industry data. Use 'a' for 
+# annual averages. Some industry codes contain hyphens. The CSV files use
+# underscores instead of hyphens. So 31-33 becomes 31_33. 
+# For all industry codes and titles see:
+# http://data.bls.gov/cew/doc/titles/industry/industry_titles.htm
 
-qcewGetAreaData <- function(year, qtr, area) {
-  url <- "http://data.bls.gov/cew/data/api/YEAR/QTR/area/AREA.csv"
+qcewGetIndustryData <- function (year, qtr, industry) {
+  url <- "http://data.bls.gov/cew/data/api/YEAR/QTR/industry/INDUSTRY.csv"
   url <- sub("YEAR", year, url, ignore.case=FALSE)
   url <- sub("QTR", tolower(qtr), url, ignore.case=FALSE)
-  url <- sub("AREA", toupper(area), url, ignore.case=FALSE)
+  url <- sub("INDUSTRY", industry, url, ignore.case=FALSE)
   read.csv(url, header = TRUE, sep = ",", quote="\"", dec=".", na.strings=" ", skip=0)
 }
 
 # ******************************************************************************************
-# data layout https://data.bls.gov/cew/doc/access/csv_data_slices.htm 
 
-CAData <- qcewGetAreaData("2019", "a", "06000")
+all_industry <- qcewGetIndustryData("2019", "a", "10")
 
-CAstate_local <- subset(CAData, )
+far_w_state_local <- subset(all_industry, (own_code == "2" | own_code == "3") & 
+                                    (area_fips == "06000" | area_fips == "32000" | 
+                                     area_fips == "41000" | area_fips == "53000"))
 
 ###
 #Ownership Codes: 
 #Local Govt: 3
 #State Govt: 2
-#Fed Govt: 1
-#Total Govt: 8
-#Total U.I. Covered (Excludes Federal Government): 9
+
+#State Fips:
+#CA "06000"
+#NV "32000"
+#OR "41000"
+#WA "53000"
 ###
+# fips codes https://data.bls.gov/cew/doc/titles/area/area_titles.htm 
