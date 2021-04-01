@@ -69,10 +69,16 @@ far_w_state_local <- subset(all_industry, (own_code == "0" | own_code == "2" | o
 
 #reshape -> small table with just average annual employment levles 
 library(reshape2)
-test <- dcast(far_w_state_local, area_fips ~ own_code, value.var = "annual_avg_emplvl")
-colnames(test) <- c('GEOID','total_employment', 'state_govt', 'local_govt')
-test$total_govt <- test$state_govt + test$local_govt
-test$govt_as_perc_total <- test$total_govt/test$total_employment
+govt_employment <- dcast(far_w_state_local, area_fips ~ own_code, value.var = "annual_avg_emplvl")
+colnames(govt_employment) <- c('GEOID','total_employment', 'state_govt_emp', 'local_govt_emp')
+govt_employment$total_govt_emp <- govt_employment$state_govt_emp + govt_employment$local_govt_emp
+govt_employment$govt_as_perc_total <- govt_employment$total_govt_emp/govt_employment$total_employment
+govt_employment$local_emp_as_perc_total <- govt_employment$local_govt_emp/govt_employment$total_employment
+govt_employment$state_emp_as_perc_total <- govt_employment$state_govt_emp/govt_employment$total_employment
+
+# make GEOID match the Census table GEOID format
+govt_employment$GEOID <- sub("000", "", as.character(govt_employment$GEOID ))
+# https://stackoverflow.com/questions/63212813/how-to-remove-trailing-zeros-in-r-dataframe 
 
 ###
 #Ownership Codes: 
@@ -130,7 +136,7 @@ test3 <- test2%>%
 # address data type problem created by transpose
 i <- c(2:49)
 test4 <- apply(test3[,i], 2, function(x) as.numeric(as.character(x)))
-
+# https://statisticsglobe.com/convert-data-frame-column-to-numeric-in-r 
 colnames(test3)
 
 per_cap <- data.frame(test4/test4[,48])
@@ -139,13 +145,19 @@ per_cap <- data.frame(test4/test4[,48])
 per_cap$Row.names <-test2$Row.names
 per_cap$GEOID <- test2$GEOID
 
-#add averages
-averages <- summarize_all(per_cap, mean)
+merged <- merge(per_cap, govt_employment, by = "GEOID")
 
-use_df<- per_cap %>%
+#add averages
+averages <- summarize_all(merged, mean)
+
+use_df<- merged %>%
   rbind(averages)
 
 use_df[5,49] <- "Far West Average"
+
+write.csv(use_df, 
+          "/Users/Sarah/Documents/GitHub/State_and_Local_Public_Finance_projects/data/far_west.csv",
+          row.names = FALSE)
 
 ######
 #test4[1,1]/test4[1,61]
@@ -155,26 +167,5 @@ use_df[5,49] <- "Far West Average"
 #sapply(per_cap2, class)
 sapply(far_west_fin,class)
 sapply(use_df, class)
-
-
-
-
-
-# next need to remove trailing 0 from emp data area_fils (or add to pop)
-# so can merge -> per capita
-# prep emp data for merge
-far_w_state_local$area_fips
-
-
-
-####
-new_fin <- subset(far_w_state_local, own_code == "2")
-test <- pivot(new_fin, area_fips, annual_avg_emplvl)
-
-
-
-df <- far_west_fin %>%
-  add_row("(Thousands of Dollars)" = 'State Employment', "California" = far_w_state_local$annual_avg_emplvl[1])
-
 
 
