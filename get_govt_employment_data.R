@@ -1,3 +1,5 @@
+#looking at the "Far West" region of the US -Bureau of Economic Analysis definition of
+# Far West: "includes" CA, OR, WA and NV (so I should check)
 
 # employment data
 # QCEW data layout https://data.bls.gov/cew/doc/access/csv_data_slices.htm 
@@ -23,6 +25,7 @@ library(readxl) # to read in the fin excel (may not need once I figure out the A
 library(dplyr) # for select and summarize_all and pipe
 library(tidyverse) # for adding the employment data to the fin data
 library(tidycensus) # to get population values (from ACS)
+library(reshape2) # to reshape the employment df
 #library(readr) # not in use but loaded while writing (beware)
 
 # not sure if this is helpful here (still need full path for read excel)
@@ -60,12 +63,20 @@ qcewGetIndustryData <- function (year, qtr, industry) {
 
 all_industry <- qcewGetIndustryData("2019", "a", "10")
 
-far_w_state_local <- subset(all_industry, (own_code == "2" | own_code == "3") & 
+far_w_state_local <- subset(all_industry, (own_code == "0" | own_code == "2" | own_code == "3") & 
                                     (area_fips == "06000" | area_fips == "32000" | 
                                      area_fips == "41000" | area_fips == "53000"))
 
+#reshape -> small table with just average annual employment levles 
+library(reshape2)
+test <- dcast(far_w_state_local, area_fips ~ own_code, value.var = "annual_avg_emplvl")
+colnames(test) <- c('GEOID','total_employment', 'state_govt', 'local_govt')
+test$total_govt <- test$state_govt + test$local_govt
+test$govt_as_perc_total <- test$total_govt/test$total_employment
+
 ###
 #Ownership Codes: 
+#Total Covered: 0
 #Local Govt: 3
 #State Govt: 2
 
@@ -76,6 +87,9 @@ far_w_state_local <- subset(all_industry, (own_code == "2" | own_code == "3") &
 #WA "53000"
 ###
 # fips codes https://data.bls.gov/cew/doc/titles/area/area_titles.htm 
+
+
+
 
 ### Revenue and Expend
 # 2019 Annual Survey of State Government Finances Tables
@@ -125,6 +139,7 @@ per_cap <- data.frame(test4/test4[,48])
 per_cap$Row.names <-test2$Row.names
 per_cap$GEOID <- test2$GEOID
 
+#add averages
 averages <- summarize_all(per_cap, mean)
 
 use_df<- per_cap %>%
