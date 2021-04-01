@@ -23,6 +23,7 @@ library(readxl) # to read in the fin excel (may not need once I figure out the A
 library(dplyr) # for select
 library(tidyverse) # for adding the employment data to the fin data
 library(tidycensus) # to get population values (from ACS)
+#library(readr) # not in use but loaded while writing (beware)
 
 # not sure if this is helpful here (still need full path for read excel)
 setwd("/Users/Sarah/Documents/GitHub/State_and_Local_Public_Finance_projects")
@@ -84,10 +85,41 @@ far_west_fin <- select(state_fin, "(Thousands of Dollars)", "California", "Nevad
 
 # transpose 
 test <- t(far_west_fin)
+colnames(test)<- test[1,]
+d <- as.integer(test)
 d2 <- data.frame(test)
+d3 <- as.numeric(d2)
 colnames(d2) <- test[1,]
-# merge
-test2 <- merge(d2, pop, by.x=0, by.y="NAME")
+
+# merge and remove untitled columns (and columns w/o a use)
+not_blankcols <- test2%>%
+  select(-starts_with("NA."))%>% colnames()
+
+test2 <- merge(d2, pop, by.x=0, by.y="NAME") %>%
+  subset(select = c(not_blankcols)) %>%
+  subset(select = -c(variable, moe)) # something is remembered between runs
+
+
+
+#test3 <- merge(test, pop, by.x = 0, by.y = "NAME")
+
+# address data type problem created by transpose
+i <- c(2:48)
+test4 <- apply(test2[,i], 2, function(x) as.numeric(as.character(x)))
+
+colnames(test2)
+
+per_cap <- data.frame(test4/test4[,47])
+
+#put statenames back -maybe should keep GEOID and overwite it in this step
+per_cap$Row.names <-test2$Row.names
+
+#test4[1,1]/test4[1,61]
+#test5<-data.frame(test4)
+#per_cap2 <- test5/test5[,61]
+#sapply(test5, class)
+#sapply(per_cap2, class)
+sapply(far_west_fin,class)
 
 
 
