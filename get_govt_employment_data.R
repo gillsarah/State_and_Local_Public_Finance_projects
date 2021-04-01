@@ -20,7 +20,7 @@
 rm(list=ls())
 
 library(readxl) # to read in the fin excel (may not need once I figure out the API for this census survey)
-library(dplyr) # for select
+library(dplyr) # for select and summarize_all and pipe
 library(tidyverse) # for adding the employment data to the fin data
 library(tidycensus) # to get population values (from ACS)
 #library(readr) # not in use but loaded while writing (beware)
@@ -84,42 +84,63 @@ state_fin <- read_xlsx("/Users/Sarah/Documents/GitHub/State_and_Local_Public_Fin
 far_west_fin <- select(state_fin, "(Thousands of Dollars)", "California", "Nevada", "Oregon", "Washington")
 
 # transpose 
-test <- t(far_west_fin)
-colnames(test)<- test[1,]
-d <- as.integer(test)
-d2 <- data.frame(test)
-d3 <- as.numeric(d2)
-colnames(d2) <- test[1,]
+transposed <- t(far_west_fin)
+colnames(transposed)<- transposed[1,]
+#d <- as.integer(test)
+d2 <- data.frame(transposed)
+#d3 <- as.numeric(d2)
+colnames(d2) <- transposed[1,]
 
 # merge and remove untitled columns (and columns w/o a use)
+test2 <- merge(transposed, pop, by.x=0, by.y="NAME") 
+
 not_blankcols <- test2%>%
   select(-starts_with("NA."))%>% colnames()
 
-test2 <- merge(d2, pop, by.x=0, by.y="NAME") %>%
-  subset(select = c(not_blankcols)) %>%
-  subset(select = -c(variable, moe)) # something is remembered between runs
+not_blankcolname <- c()
+for(i in colnames(test2)){
+  if(!is.na(i)){
+    not_blankcolname<-append(not_blankcolname,i)
+  }
+} 
+#print(not_blankcolname)
+
+test3 <- test2%>%
+  subset(select = c(not_blankcolname)) %>%
+  subset(select = -c(variable, moe)) 
 
 
 
 #test3 <- merge(test, pop, by.x = 0, by.y = "NAME")
 
 # address data type problem created by transpose
-i <- c(2:48)
-test4 <- apply(test2[,i], 2, function(x) as.numeric(as.character(x)))
+i <- c(2:49)
+test4 <- apply(test3[,i], 2, function(x) as.numeric(as.character(x)))
 
-colnames(test2)
+colnames(test3)
 
-per_cap <- data.frame(test4/test4[,47])
+per_cap <- data.frame(test4/test4[,48])
 
-#put statenames back -maybe should keep GEOID and overwite it in this step
+#put statenames and GEOID back
 per_cap$Row.names <-test2$Row.names
+per_cap$GEOID <- test2$GEOID
 
+averages <- summarize_all(per_cap, mean)
+
+use_df<- per_cap %>%
+  rbind(averages)
+
+use_df[5,49] <- "Far West Average"
+
+######
 #test4[1,1]/test4[1,61]
 #test5<-data.frame(test4)
 #per_cap2 <- test5/test5[,61]
 #sapply(test5, class)
 #sapply(per_cap2, class)
 sapply(far_west_fin,class)
+sapply(use_df, class)
+
 
 
 
