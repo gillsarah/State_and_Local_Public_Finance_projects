@@ -149,10 +149,15 @@ per_cap <- per_capita_state_finance(far_west_fin)
 merged <- merge(per_cap, govt_employment, by = "GEOID")
 
 # add averages
-averages <- summarize_all(merged, mean)
+averages_row <- function(df){
+  averages <- summarize_all(df, mean)
+  
+  use_df<- df %>%
+    rbind(averages)
+  return(use_df)
+}
 
-use_df<- merged %>%
-  rbind(averages)
+use_df <- averages_row(merged)
 
 use_df[5,49] <- "Far West Average"
 
@@ -163,5 +168,46 @@ write.csv(use_df,
 ######
 #sapply(far_west_fin,class)
 #sapply(use_df, class)
+
+##### Tables
+# breaking up df into smaller dfs for easier viewing/comparison
+
+# Employment table
+# caution: relies on the order of states being the same
+emp <- cbind(govt_employment, per_cap$Row.names)
+
+relative_emp <- emp[,6:9]
+# order by govt as percent of employment
+# https://www.guru99.com/r-sort-data-frame.html
+relative_emp_ordered <- relative_emp[order(relative_emp$govt_as_perc_total, decreasing = TRUE),]
+
+# add far west avg
+relative_emp_ordered1 <- averages_row(relative_emp_ordered)
+
+
+relative_emp_ordered1[5,4] <- "Far West Average"
+row.names(relative_emp_ordered1) <- relative_emp_ordered1$`per_cap$Row.names`
+relative_emp_ordered1 <- relative_emp_ordered1[,1:3]
+
+relative_emp_table <- t(relative_emp_ordered1)
+row.names(relative_emp_table) <- c("State and Local Government as % of Total Employment", 
+                                   "Local Government as % of Total Employment",
+                                   "State Government as % of Total Employment")
+
+###
+# Revenue
+revenue <- per_cap[,1:15]
+revenue <- cbind(revenue, per_cap$Row.names)
+
+# order by total revenue
+revenue_ordered <- revenue[order(revenue$Total.revenue, decreasing = TRUE),]
+
+# Compare total Revenue
+
+# Table for each state with revenue by source, decreasing order
+
+# Compare Total expend
+
+# Table for each state with expend by source, decreasing order
 
 
