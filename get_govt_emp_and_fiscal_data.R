@@ -26,7 +26,6 @@ library(dplyr) # for select and summarize_all and pipe
 library(tidyverse) # for adding the employment data to the fin data
 library(tidycensus) # to get population values (from ACS)
 library(reshape2) # to reshape the employment df
-#library(readr) # not in use but loaded while writing (beware)
 
 # not sure if this is helpful here (still need full path for read excel)
 setwd("/Users/Sarah/Documents/GitHub/State_and_Local_Public_Finance_projects")
@@ -66,20 +65,6 @@ all_industry <- qcewGetIndustryData("2019", "a", "10")
 far_w_state_local <- subset(all_industry, (own_code == "0" | own_code == "2" | own_code == "3") & 
                                     (area_fips == "06000" | area_fips == "32000" | 
                                      area_fips == "41000" | area_fips == "53000"))
-
-#reshape -> small table with just average annual employment levles 
-library(reshape2)
-govt_employment <- dcast(far_w_state_local, area_fips ~ own_code, value.var = "annual_avg_emplvl")
-colnames(govt_employment) <- c('GEOID','total_employment', 'state_govt_emp', 'local_govt_emp')
-govt_employment$total_govt_emp <- govt_employment$state_govt_emp + govt_employment$local_govt_emp
-govt_employment$govt_as_perc_total <- govt_employment$total_govt_emp/govt_employment$total_employment
-govt_employment$local_emp_as_perc_total <- govt_employment$local_govt_emp/govt_employment$total_employment
-govt_employment$state_emp_as_perc_total <- govt_employment$state_govt_emp/govt_employment$total_employment
-
-# make GEOID match the Census table GEOID format
-govt_employment$GEOID <- sub("000", "", as.character(govt_employment$GEOID ))
-# https://stackoverflow.com/questions/63212813/how-to-remove-trailing-zeros-in-r-dataframe 
-
 ###
 #Ownership Codes: 
 #Total Covered: 0
@@ -94,7 +79,20 @@ govt_employment$GEOID <- sub("000", "", as.character(govt_employment$GEOID ))
 ###
 # fips codes https://data.bls.gov/cew/doc/titles/area/area_titles.htm 
 
+# make table with just average annual employment levles and these as % of total
+avg_government_employment <- function (far_w_state_local) {
 
+  govt_employment <- dcast(far_w_state_local, area_fips ~ own_code, value.var = "annual_avg_emplvl")
+  colnames(govt_employment) <- c('GEOID','total_employment', 'state_govt_emp', 'local_govt_emp')
+  govt_employment$total_govt_emp <- govt_employment$state_govt_emp + govt_employment$local_govt_emp
+  govt_employment$govt_as_perc_total <- govt_employment$total_govt_emp/govt_employment$total_employment
+  govt_employment$local_emp_as_perc_total <- govt_employment$local_govt_emp/govt_employment$total_employment
+  govt_employment$state_emp_as_perc_total <- govt_employment$state_govt_emp/govt_employment$total_employment
+  # make GEOID match the Census table GEOID format
+  govt_employment$GEOID <- sub("000", "", as.character(govt_employment$GEOID ))
+  # https://stackoverflow.com/questions/63212813/how-to-remove-trailing-zeros-in-r-dataframe 
+  return(govt_employment)
+}
 
 
 ### Revenue and Expend
@@ -103,51 +101,54 @@ govt_employment$GEOID <- sub("000", "", as.character(govt_employment$GEOID ))
 state_fin <- read_xlsx("/Users/Sarah/Documents/GitHub/State_and_Local_Public_Finance_projects/data/2019_ASFIN_State_Totals.xlsx")
 far_west_fin <- select(state_fin, "(Thousands of Dollars)", "California", "Nevada", "Oregon", "Washington")
 
-# transpose 
-transposed <- t(far_west_fin)
-colnames(transposed)<- transposed[1,]
-#d <- as.integer(test)
-d2 <- data.frame(transposed)
-#d3 <- as.numeric(d2)
-colnames(d2) <- transposed[1,]
+per_capita_state_finance <- function (far_west_fin) {
+  
+  # transpose 
+  transposed <- t(far_west_fin)
+  colnames(transposed)<- transposed[1,]
+  d2 <- data.frame(transposed)
+  colnames(d2) <- transposed[1,]
 
-# merge and remove untitled columns (and columns w/o a use)
-test2 <- merge(transposed, pop, by.x=0, by.y="NAME") 
+  # merge 
+  test2 <- merge(transposed, pop, by.x=0, by.y="NAME") 
 
-not_blankcols <- test2%>%
-  select(-starts_with("NA."))%>% colnames()
+  # remove untitled columns (and columns w/o a use)
+  not_blankcolname <- c()
+  for(i in colnames(test2)){
+    if(!is.na(i)){
+      not_blankcolname<-append(not_blankcolname,i)
+   }
+  } 
 
-not_blankcolname <- c()
-for(i in colnames(test2)){
-  if(!is.na(i)){
-    not_blankcolname<-append(not_blankcolname,i)
-  }
-} 
-#print(not_blankcolname)
+  test3 <- test2%>%
+    subset(select = c(not_blankcolname)) %>%
+    subset(select = -c(variable, moe)) 
 
-test3 <- test2%>%
-  subset(select = c(not_blankcolname)) %>%
-  subset(select = -c(variable, moe)) 
+  # address data type problem created by transpose
+  i <- c(2:49)
+  test4 <- apply(test3[,i], 2, function(x) as.numeric(as.character(x)))
+  # https://statisticsglobe.com/convert-data-frame-column-to-numeric-in-r 
+
+  per_cap <- data.frame(test4/test4[,48])
+
+  #put statenames and GEOID back
+  per_cap$Row.names <-test2$Row.names
+  per_cap$GEOID <- test2$GEOID
+  
+  return(per_cap)
+}
 
 
+# call the fn -> govt emp df
+govt_employment<- avg_government_employment(far_w_state_local)
 
-#test3 <- merge(test, pop, by.x = 0, by.y = "NAME")
+# call the fn -> per cappita govt finances
+per_cap <- per_capita_state_finance(far_west_fin)
 
-# address data type problem created by transpose
-i <- c(2:49)
-test4 <- apply(test3[,i], 2, function(x) as.numeric(as.character(x)))
-# https://statisticsglobe.com/convert-data-frame-column-to-numeric-in-r 
-colnames(test3)
-
-per_cap <- data.frame(test4/test4[,48])
-
-#put statenames and GEOID back
-per_cap$Row.names <-test2$Row.names
-per_cap$GEOID <- test2$GEOID
-
+# merge govt finances and govt emp
 merged <- merge(per_cap, govt_employment, by = "GEOID")
 
-#add averages
+# add averages
 averages <- summarize_all(merged, mean)
 
 use_df<- merged %>%
@@ -160,12 +161,7 @@ write.csv(use_df,
           row.names = FALSE)
 
 ######
-#test4[1,1]/test4[1,61]
-#test5<-data.frame(test4)
-#per_cap2 <- test5/test5[,61]
-#sapply(test5, class)
-#sapply(per_cap2, class)
-sapply(far_west_fin,class)
-sapply(use_df, class)
+#sapply(far_west_fin,class)
+#sapply(use_df, class)
 
 
