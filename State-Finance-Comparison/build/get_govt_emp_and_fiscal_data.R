@@ -1,5 +1,6 @@
 #looking at the "Far West" region of the US -Bureau of Economic Analysis definition of
-# Far West: "includes" CA, OR, WA and NV (so I should check)
+# Far West: includes CA, OR, WA and NV
+# Far West also includes HI and AK, but this analysis looks only at contenental US
 
 # employment data
 # QCEW data layout https://data.bls.gov/cew/doc/access/csv_data_slices.htm 
@@ -162,9 +163,17 @@ use_df <- averages_row(merged)
 use_df[5,49] <- "Far West Average"
 
 write.csv(use_df, 
-          "/Users/Sarah/Documents/GitHub/State_and_Local_Public_Finance_projects/data/far_west.csv",
+          "/Users/Sarah/Documents/GitHub/State_and_Local_Public_Finance_projects/State-Finance-Comparison/data/far_west.csv",
           row.names = FALSE)
 
+
+use_df_t <- t(use_df)
+colnames(use_df_t) <- use_df$Row.names 
+use_df_t <- use_df_t[-c(48,49),]
+
+write.csv(use_df_t,
+          "/Users/Sarah/Documents/GitHub/State_and_Local_Public_Finance_projects/State-Finance-Comparison/data/far_west_t.csv"
+          )
 ######
 #sapply(far_west_fin,class)
 #sapply(use_df, class)
@@ -198,13 +207,19 @@ row.names(relative_emp_table) <- c("State and Local Government as % of Total Emp
 # Revenue
 revenue <- per_cap[,1:15]
 revenue <- cbind(revenue, per_cap$Row.names)
-
+row.names(revenue) <- revenue$`per_cap$Row.names`
 # order by total revenue
 revenue_ordered <- revenue[order(revenue$Total.revenue, decreasing = TRUE),]
 
 # Compare total Revenue
+total_rev <- revenue_ordered[,1:2]
 
 # Table for each state with revenue by source, decreasing order
+CA_rev <- revenue_ordered[1, 3:15]
+CA_rev <- select(CA_rev, -c("Taxes")) #Taxes is the sum of ea tax, also listed
+CA_t <- data.frame(t(CA_rev))
+CA_t$Rrevenue_source <- row.names(CA_t)
+CA_ordered <-  CA_t[order(CA_t$California,decreasing = TRUE),]
 
 # Compare Total expend
 
