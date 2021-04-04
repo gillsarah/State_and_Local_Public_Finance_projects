@@ -131,6 +131,8 @@ per_capita_state_finance <- function (far_west_fin) {
   # https://statisticsglobe.com/convert-data-frame-column-to-numeric-in-r 
 
   per_cap <- data.frame(test4/test4[,48])
+  #data is in thousands of $s, converting to ones of $s
+  per_cap <- per_cap*1000
 
   #put statenames and GEOID back
   per_cap$Row.names <-test2$Row.names
